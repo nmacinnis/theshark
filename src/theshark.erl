@@ -1,11 +1,10 @@
 -module(theshark).
-
 -export([do/0, quote_text/1, make_status/1, make_status_request/1]).
 
 do() ->
     inets:start(),
     Request = make_status_request(make_status("Status!")),
-    {code, Result} = http:request(post, Request, [], []),
+    {code, Result} = httpc:request(post, Request, [], []),
     io:format(Result).
 
 quote_text(Text) ->
