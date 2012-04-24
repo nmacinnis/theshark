@@ -6,10 +6,10 @@ all: ebin/
 	erlc -o ebin include/* 
 
 clean:
-	rm -rf ebin/*
+	rm -rf ebin/*.beam
 
 run: clean all
-	(cd ebin;erl -config priv/settings -s theshark do)
+	(cd ebin;erl -pa ebin -config priv/settings -s theshark do)
 
 repl: clean all
 	erl -pa ebin -config priv/settings

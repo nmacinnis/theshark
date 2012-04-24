@@ -1,6 +1,21 @@
 -module(theshark).
 -export([do/0, quote_text/1, make_status/1, make_status_request/1]).
 
+-behaviour(application).
+
+-export([
+    start/2,
+    stop/1
+]).
+
+start(_Type, _StartArgs) ->
+    do().
+
+stop(_State) ->
+    ok.
+
+
+
 do() ->
     inets:start(),
     Request = make_status_request(make_status("Status!")),
