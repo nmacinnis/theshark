@@ -6,10 +6,10 @@ all: ebin/
 	erlc -o ebin include/* 
 
 clean:
-	rm -rf ebin/*.beam
+	rm -rf ebin/*.beam erl_crash.dump
 
 run: clean all
-	(cd ebin;erl -pa ebin -config priv/settings -s theshark do)
+	erl -pa ebin -config priv/settings -s sasl -s crypto -s inets -s theshark do
 
 repl: clean all
 	erl -pa ebin -config priv/settings

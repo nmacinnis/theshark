@@ -1,26 +1,76 @@
 -module(theshark).
 -export([do/0, quote_text/1, make_status/1, make_status_request/1]).
 
--behaviour(application).
+-behaviour(gen_server).
 
--export([
-    start/2,
-    stop/1
-]).
+-export([start_link/0, tick/0]).
+-export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
+        code_change/3]).
 
-start(_Type, _StartArgs) ->
-    do().
+%% ============================================================================
+%% Module API
+%% ============================================================================
 
-stop(_State) ->
+
+start_link() ->
+    gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
+
+tick() ->
+    ok.
+tick([]) ->
     ok.
 
+%% ============================================================================
+%% gen_server Behaviour
+%% ============================================================================
 
+
+init(State) ->
+    {ok, State}.
+
+handle_call(tick, _From, State) ->
+    {reply, tick(State), State}.
+
+handle_cast(_Msg, State) ->
+    {noreply, State}.
+
+handle_info(_Info, State) ->
+    {noreply, State}.
+
+terminate(_Reason, _State) ->
+    ok.
+
+code_change(_OldVsn, State, _Extra) ->
+    {ok, State}.
+
+%% ============================================================================
 
 do() ->
+    TwitterUser = application:get_env(twitter_user),
+    TwitterPass = application:get_env(pass),
+    TwitterUpdateUri = application:get_env(twitter_update_uri),
+    TwitterContentType = "application/x-www-form-urlencoded",
+    ConsumerKey = application:get_env(consumer_key),
+    ConsumerSecret = application:get_env(consumer_secret),
+    Consumer = {ConsumerKey, ConsumerSecret, hmac_sha1},
+    AccessToken = application:get_env(access_token),
+    AccessTokenSecret = application:get_env(access_token_secret),
+    IrcServer = application:get_env(irc_server),
+    IrcLogin = application:get_env(irc_login),
+    IrcIdent = application:get_env(irc_ident),
+    IrcIdentPass = application:get_env(ird_ident_pass),
+    IrcChannel = application:get_env(irc_channel),
     inets:start(),
+    crypto:start(),
     Request = make_status_request(make_status("Status!")),
-    {code, Result} = httpc:request(post, Request, [], []),
-    io:format(Result).
+    %%{code, Result} = httpc:request(post, Request, [], []),
+    %%Things = ["POST", TwitterUpdateUri, [make_status("Status!")], Consumer, AccessToken, AccessTokenSecret],
+    %%io:format(Things),
+    SignedParams = oauth:sign("POST", TwitterUpdateUri, [make_status("Status!")], Consumer, AccessToken, AccessTokenSecret),
+    %%io:format(SignedParams).
+    %%OauthResponse = oauth:post(TwitterUpdateUri, [make_status("Status!")], Consumer, AccessToken, AccessTokenSecret),
+    %%io:format(OauthResponse).
+    {ok, 2134}.
 
 quote_text(Text) ->
     "\"" ++ Text ++ "\"".
@@ -29,9 +79,7 @@ make_status(Text) ->
     "{" ++ quote_text("status") ++ ":" ++ quote_text(Text) ++ "}".
 
 make_status_request(Status) ->
-    io:format(Status),
-    Url = "http://api.twitter.com/1/statuses/update.json",
+    %%io:format(Status),
     Headers = [],
-    ContentType = "application/x-www-form-urlencoded",
     Body = Status,
-    {Url, Headers, ContentType, Body}.
+    {url, Headers, contenttype, Body}.

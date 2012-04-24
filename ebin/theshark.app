@@ -3,8 +3,8 @@
 {application, theshark,
  [{description, "the shark"},
   {vsn, "0.1.0"},
-  {modules, [theshark]},
+  {modules, [shark_sup, shark_app, theshark]},
   {registered, [theshark]},
   {applications, [kernel, stdlib]},
-  {mod, {theshark, []}}
+  {mod, {shark_app, [inets, crypto]}}
  ]}.
