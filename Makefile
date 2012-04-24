@@ -8,8 +8,8 @@ all: ebin/
 clean:
 	rm -rf ebin/*.beam erl_crash.dump
 
-run: clean all
-	erl -pa ebin -config priv/settings -s sasl -s crypto -s inets -s theshark do
-
 repl: clean all
 	erl -pa ebin -config priv/settings
+
+boot: clean all
+	erl -pa ebin -config priv/settings -boot shark_app
