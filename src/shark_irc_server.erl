@@ -2,14 +2,12 @@
 
 -behaviour(gen_server).
 
--export([start_link/0]).
+-export([start_link/0, url/1, go/0]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
     code_change/3]).
 
 -import(shark_util, [env/1]).
 -import(irc_basics, [process_code/1]).
-
--export([go/0,send/2]).
 
 %% ============================================================================
 %% Module API
@@ -18,19 +16,27 @@
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
+url(Url) ->
+    gen_server:call(?MODULE, Url).
 
+go() ->
+    gen_server:cast(?MODULE, go).
 %% ============================================================================
 %% gen_server Behaviour
 %% ============================================================================
 
 init(State) ->
+    go(),
     {ok, State}.
 
-handle_call(tick, _From, State) ->
+handle_call(Url, _From, State) ->
+    io:format("sayin a thing ~s~n", [Url]),
+    irc_commands:say(env(irc_channel), Url),
     {reply, _From, State}.
 
-handle_cast(unsure, Unsure) ->
-    {noreply, Unsure}.
+handle_cast(go, State) ->
+    initial_listen(),
+    {noreply, State}.
 
 handle_info(_Info, State) ->
     {noreply, State}.
@@ -49,9 +55,6 @@ code_change(_OldVsn, State, _Extra) ->
 
 
 
-go() ->
-    ets:new(chanstate,[named_table]),
-    initial_listen().
 
 initial_listen() ->
     Options = socket_options(),
@@ -104,56 +107,17 @@ parse_thing(Type, Packet, Socket) ->
     case Type of
         pubnotice ->
             check_notice(Socket, Packet);
-        kick ->
-            send(Socket, [irc_commands:join(env(irc_channel)),irc_commands:list_names(env(irc_channel))]);
         endofmotd ->
             send(Socket, [irc_commands:join(env(irc_channel))]);
-        join ->
-            send(Socket, %[irc_commands:say(env(irc_channel), "Hey what's up"),
-                [irc_commands:list_names(env(irc_channel))]);
-        nick ->
-            send(Socket, [irc_commands:list_names(env(irc_channel))]);
-        part ->
-            send(Socket, [irc_commands:list_names(env(irc_channel))]);
-        privmsg ->
-            ok;
         topic ->
             io:format("topic!!"),
             topic_change(Packet);
         ping ->
             send(Socket, [irc_commands:pong(Packet)]);
-        namreply ->
-            handle_names(Packet);
-        endofnames ->
-            end_of_names();
         _ ->
             ok
     end.
 
-handle_names(Packet) ->
-    TempKey = env(irc_channel) ++ "_temp",
-    NameList = extract_names(Packet),
-    case ets:lookup(chanstate, TempKey) of
-        [] -> 
-            ets:insert(chanstate, {TempKey, NameList});
-        [{TempKey, CurrNames}] ->
-            ets:insert(chanstate, {TempKey, NameList ++ CurrNames})
-    end.
-            
-extract_names(Packet) ->
-    [_Server, _Code, _Nick, _Equal, _Channel | Names] = 
-        string:tokens(Packet, "\r\n :@+"),
-    Names.
-
-end_of_names() ->
-    TempKey = env(irc_channel) ++ "_temp",
-    case ets:lookup(chanstate, TempKey) of 
-        [] -> 
-            skip;
-        [{TempKey, Names}] ->
-            ets:insert(chanstate, {env(irc_channel), Names}),
-            ets:delete(chanstate, TempKey)
-    end.
 
 check_notice(Socket, Packet) ->
     [_Server, _Type, From, _Message | _Tail] = string:tokens(Packet, " "),
@@ -166,8 +130,11 @@ topic_change(Packet) ->
     Tokenized = string:tokens(string:to_lower(Packet), " "),
     if 
         length(Tokenized) >= 4 ->
-            [From, "topic", Channel | Rest] = Tokenized,
-            io:format("~s~n", [Rest]);
+            [_, "topic", _ | RemainingTokens] = Tokenized,
+            Rest = lists:concat([Token ++ " " || Token <- RemainingTokens]),
+            Topic = lists:sublist(Rest, 2, lists:flatlength(Rest)-3),
+            io:format("~s~n", [Topic]),
+            shark_twitter_server:post(Topic);
         true ->
             nil
     end.

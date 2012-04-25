@@ -12,4 +12,4 @@ repl: clean all
 	erl -pa ebin -config priv/settings
 
 boot: clean all
-	erl -pa ebin -config priv/settings -boot shark_app
+	erl -pa ebin -config priv/settings -boot shark_app 
