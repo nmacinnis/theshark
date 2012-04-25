@@ -2,9 +2,10 @@
 
 -behaviour(gen_server).
 
--export([start_link/0, url/1, go/0]).
+-export([start_link/0, url/2, go/0]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
     code_change/3]).
+-export([loop/1]).
 
 -import(shark_util, [env/1]).
 -import(irc_basics, [process_code/1]).
@@ -16,8 +17,8 @@
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
-url(Url) ->
-    gen_server:call(?MODULE, Url).
+url(Url, Socket) ->
+    gen_server:call(?MODULE, {Url, Socket}).
 
 go() ->
     gen_server:cast(?MODULE, go).
@@ -29,9 +30,9 @@ init(State) ->
     go(),
     {ok, State}.
 
-handle_call(Url, _From, State) ->
+handle_call({Url, Socket}, _From, State) ->
     io:format("sayin a thing ~s~n", [Url]),
-    irc_commands:say(env(irc_channel), Url),
+    send(Socket, [irc_commands:say(env(irc_channel), Url)]),
     {reply, _From, State}.
 
 handle_cast({accepted, _Pid, Socket}, State) ->
@@ -65,7 +66,7 @@ initial_listen() ->
     case gen_tcp:connect(env(irc_server), list_to_integer(env(irc_port)), Options) of
         {ok, Socket} ->
             io:format("connected to ~p:~p~n", [env(irc_server),env(irc_port)]),
-            loop(Socket);
+            spawn_loop_proc(Socket);
         {error, Reason} ->
             Reason
     end.
@@ -84,17 +85,18 @@ send(Socket, InstructionList) ->
 
     send(Socket, Tail).
 
-loop({Server, Socket}) ->
+loop(Socket) ->
     case gen_tcp:recv(Socket, 0) of
         {ok, Packet} ->
-            process_message(Packet, Socket),
-            gen_server:cast(Server, {received, self(), Socket});
+            process_message(Packet, Socket);
+            %%gen_server:cast(Server, {received, self(), Socket});
         {error, Reason} ->
             io:format(Reason)
-    end.
+    end,
+    loop(Socket).
 
 spawn_loop_proc(Socket) ->
-    proc_lib:spawn(?MODULE, loop, [{self(), Socket}]),
+    proc_lib:spawn(?MODULE, loop, [Socket]),
     Socket.
 
 process_message(Packet, Socket) ->
@@ -118,7 +120,7 @@ parse_thing(Type, Packet, Socket) ->
             send(Socket, [irc_commands:join(env(irc_channel))]);
         topic ->
             io:format("topic!!"),
-            topic_change(Packet);
+            topic_change(Packet, Socket);
         ping ->
             send(Socket, [irc_commands:pong(Packet)]);
         _ ->
@@ -133,7 +135,7 @@ check_notice(Socket, Packet) ->
         _ -> ok
     end.
 
-topic_change(Packet) ->
+topic_change(Packet, Socket) ->
     Tokenized = string:tokens(string:to_lower(Packet), " "),
     if 
         length(Tokenized) >= 4 ->
@@ -141,7 +143,7 @@ topic_change(Packet) ->
             Rest = lists:concat([Token ++ " " || Token <- RemainingTokens]),
             Topic = lists:sublist(Rest, 2, lists:flatlength(Rest)-3),
             io:format("~s~n", [Topic]),
-            shark_twitter_server:post(Topic);
+            shark_twitter_server:post(Topic, Socket);
         true ->
             nil
     end.
