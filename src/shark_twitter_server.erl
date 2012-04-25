@@ -1,12 +1,11 @@
 -module(shark_twitter_server).
--export([do/0, quote_text/1, make_status/1, make_status_request/1]).
 
 -behaviour(gen_server).
 
 -export([start_link/0, tick/0]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
         code_change/3]).
--export([do/0]).
+-export([post_status/1]).
 %% ============================================================================
 %% Module API
 %% ============================================================================
@@ -45,56 +44,15 @@ code_change(_OldVsn, State, _Extra) ->
 
 %% ============================================================================
 
-do() ->
-    TwitterUser = env(twitter_user),
-    io:format("~s~n", [TwitterUser]),
-    TwitterPass = env(twitter_pass),
-    io:format("~s~n", [TwitterPass]),
-    TwitterUpdateUri = env(twitter_update_uri),
-    io:format("~s~n", [TwitterUpdateUri]),
-    TwitterContentType = "application/x-www-form-urlencoded",
-    ConsumerKey = env(consumer_key),
-    io:format("~s~n", [ConsumerKey]),
-    ConsumerSecret = env(consumer_secret),
-    io:format("~s~n", [ConsumerSecret]),
+post_status(Status) ->
+    TwitterUpdateUri = shark_util:env(twitter_update_uri),
+    ConsumerKey = shark_util:env(consumer_key),
+    ConsumerSecret = shark_util:env(consumer_secret),
     Consumer = {ConsumerKey, ConsumerSecret, hmac_sha1},
-    AccessToken = env(access_token),
-    io:format("~s~n", [AccessToken]),
-    AccessTokenSecret = env(access_token_secret),
-    io:format("~s~n", [AccessTokenSecret]),
-    IrcServer = env(irc_server),
-    IrcLogin = env(irc_login),
-    IrcIdent = env(irc_ident),
-    IrcIdentPass = env(ird_ident_pass),
-    IrcChannel = env(irc_channel),
-    io:format("~n~n~n~n", []),
-    %%oauth:uri_params_encode(oauth:sign("POST", TwitterUpdateUri, [make_status("Status!")], Consumer, AccessToken, AccessTokenSecret)).
-    OauthResponse = oauth:post(TwitterUpdateUri, [make_status("Status!")], Consumer, AccessToken, AccessTokenSecret),
-    %%io:format(OauthResponse).
+    AccessToken = shark_util:env(access_token),
+    AccessTokenSecret = shark_util:env(access_token_secret),
+    OauthResponse = oauth:post(TwitterUpdateUri, [make_status(Status)], Consumer, AccessToken, AccessTokenSecret),
     OauthResponse.
 
-quote_text(Text) ->
-    "\"" ++ Text ++ "\"".
-
-make_status(Text) ->
-    "{" ++ quote_text("status") ++ ":" ++ quote_text(Text) ++ "}".
-
-make_status_request(Status) ->
-    %%io:format(Status),
-    Headers = [],
-    Body = Status,
-    {url, Headers, contenttype, Body}.
-
-join([]) -> "";
-join([W|Ws]) -> join(Ws, W).
-
-join([], S) -> S;
-join([W], S) -> join([], S ++ " and " ++ W);
-join([W|Ws], S) -> join(Ws, S ++ ", " ++ W).    
-
-env(Variable) ->
-    case application:get_env(shark_app, Variable) of
-        {ok, Value} -> Value;
-        undefined -> undefined
-    end.
+make_status(Text) -> {status, Text}.
 
