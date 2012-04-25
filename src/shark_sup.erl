@@ -10,5 +10,13 @@ start_link() ->
 
 init([]) ->
     {ok, {{one_for_one, 1, 60},
-        [{shark_twitter_server, {shark_twitter_server, start_link, []},
-          permanent, brutal_kill, worker, [theshark]}]}}.
+        [
+            {shark_twitter_server, 
+              {shark_twitter_server, start_link, []},
+              permanent, brutal_kill, worker, [shark_twitter_server]},
+            {shark_irc_server, 
+              {shark_irc_server, start_link, []},
+              permanent, brutal_kill, worker, [shark_irc_server]}
+        ]
+    }
+}.
