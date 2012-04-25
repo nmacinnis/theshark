@@ -136,10 +136,10 @@ check_notice(Socket, Packet) ->
     end.
 
 topic_change(Packet, Socket) ->
-    Tokenized = string:tokens(string:to_lower(Packet), " "),
+    Tokenized = string:tokens(Packet, " "),
     if 
         length(Tokenized) >= 4 ->
-            [_, "topic", _ | RemainingTokens] = Tokenized,
+            [_, "TOPIC", _ | RemainingTokens] = Tokenized,
             Rest = lists:concat([Token ++ " " || Token <- RemainingTokens]),
             Topic = lists:sublist(Rest, 2, lists:flatlength(Rest)-3),
             io:format("~s~n", [Topic]),
