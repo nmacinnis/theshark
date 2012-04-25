@@ -161,23 +161,7 @@ verify_in_constant_time([], [], Result) ->
   Result == 0.
 
 signature_base_string(HttpMethod, URL, Params) ->
-  io:format(stringize([HttpMethod, URL, Params])),
   uri_join([HttpMethod, uri_normalize(URL), params_encode(Params)]).
-
-
-join([]) -> "";
-join([W|Ws]) -> join(Ws, W).
-
-join([], S) -> S;
-join([W], S) -> join([], S ++ " and " ++ W);
-join([W|Ws], S) -> join(Ws, S ++ ", " ++ W).
-
-stringize(A) when is_tuple(A) -> stringize(tuple_to_list(A));
-stringize(A) when is_atom(A) -> atom_to_list(A);
-stringize([]) -> "";
-stringize([A | An]) -> [stringize(A)] ++ stringize(An);
-stringize(A) -> A.
-
 
 params_encode(Params) ->
   % cf. http://tools.ietf.org/html/rfc5849#section-3.4.1.3.2
