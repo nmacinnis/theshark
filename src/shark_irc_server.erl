@@ -34,6 +34,9 @@ handle_call(Url, _From, State) ->
     irc_commands:say(env(irc_channel), Url),
     {reply, _From, State}.
 
+handle_cast({accepted, _Pid, Socket}, State) ->
+    spawn_loop_proc(Socket),
+    {noreply, State};
 handle_cast(go, State) ->
     initial_listen(),
     {noreply, State}.
@@ -81,14 +84,18 @@ send(Socket, InstructionList) ->
 
     send(Socket, Tail).
 
-loop(Socket) ->
+loop({Server, Socket}) ->
     case gen_tcp:recv(Socket, 0) of
         {ok, Packet} ->
             process_message(Packet, Socket),
-            loop(Socket);
+            gen_server:cast(Server, {received, self(), Socket});
         {error, Reason} ->
             io:format(Reason)
     end.
+
+spawn_loop_proc(Socket) ->
+    proc_lib:spawn(?MODULE, loop, [{self(), Socket}]),
+    Socket.
 
 process_message(Packet, Socket) ->
     io:format("~s",[Packet]),
