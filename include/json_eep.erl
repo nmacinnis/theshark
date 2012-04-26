@@ -227,7 +227,7 @@ profile() ->
 profile_next([]) -> ok;
 
 profile_next([{_,J}|Rest]) ->
-    Term = json_to_term(J),
+    % Term = json_to_term(J),
     % term_to_json(Term),
     profile_next(Rest).
 
