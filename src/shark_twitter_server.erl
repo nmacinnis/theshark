@@ -31,7 +31,6 @@ handle_call(idk, _From, State) ->
 handle_cast({Status, Socket}, State) ->
     {ok, Response} = post_status(Status),
     Url = get_url_from_response(Response),
-    io:format("sendan a thing ~s~n", [Url]),
     shark_irc_server:url(Url, Socket),
     {noreply, State}.
 
@@ -52,7 +51,6 @@ code_change(_OldVsn, State, _Extra) ->
 make_status(Text) -> {status, Text}.
 
 post_status(Status) ->
-    io:format("tweetan ~s~n", [Status]),
     TwitterUpdateUri    = env(twitter_update_uri),
     ConsumerKey         = env(consumer_key),
     ConsumerSecret      = env(consumer_secret),
@@ -64,6 +62,7 @@ post_status(Status) ->
 
 get_url_from_response(Response) ->
     {_, _, Json} = Response,
-    SecondHalf = re:replace(Json, ".*id_str\":\"", "", [{return, list}]),
-    Id = re:replace(SecondHalf, "\",.*", "", [{return, list}]),
+    {Terms} = json_eep:json_to_term(Json),
+    {_, IdBinary} = lists:keyfind(<<"id_str">>, 1, Terms),
+    Id = binary_to_list(IdBinary),
     "http://twitter.com/#!/THE___SHARK/status/" ++ Id.
