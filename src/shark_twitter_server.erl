@@ -2,7 +2,7 @@
 
 -behaviour(gen_server).
 
--export([start_link/0, post/1]).
+-export([start_link/0, post/2]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
         code_change/3]).
 
@@ -15,8 +15,8 @@
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
-post(Status) ->
-    gen_server:cast(?MODULE, Status).
+post(Status, Socket) ->
+    gen_server:cast(?MODULE, {Status, Socket}).
 
 %% ============================================================================
 %% gen_server Behaviour
@@ -28,11 +28,11 @@ init(State) ->
 handle_call(idk, _From, State) ->
     {ok, _From, State}.
 
-handle_cast(Status, State) ->
+handle_cast({Status, Socket}, State) ->
     {ok, Response} = post_status(Status),
     Url = get_url_from_response(Response),
     io:format("sendan a thing ~s~n", [Url]),
-    %shark_irc_server:url(Url),
+    shark_irc_server:url(Url, Socket),
     {noreply, State}.
 
 handle_info(_Info, State) ->
