@@ -69,7 +69,8 @@ initial_listen() ->
             send(Socket, initial_sequence()),
             spawn_loop_proc(Socket);
         {error, Reason} ->
-            Reason
+            io:format("failed to connect because of ~p~n", [Reason]),
+            initial_listen()
     end.
 
 send(_Socket, []) -> ok;
@@ -89,12 +90,13 @@ send(Socket, InstructionList) ->
 loop(Socket) ->
     case gen_tcp:recv(Socket, 0) of
         {ok, Packet} ->
-            process_message(Packet, Socket);
+            process_message(Packet, Socket),
+            loop(Socket);
             %%gen_server:cast(Server, {received, self(), Socket});
         {error, Reason} ->
-            io:format(Reason)
-    end,
-    loop(Socket).
+            io:format("connection problem, reason: ~p~n", [Reason]),
+            initial_listen()
+    end.
 
 spawn_loop_proc(Socket) ->
     proc_lib:spawn(?MODULE, loop, [Socket]),
