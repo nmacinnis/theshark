@@ -66,9 +66,11 @@ initial_listen() ->
     case gen_tcp:connect(env(irc_server), list_to_integer(env(irc_port)), Options) of
         {ok, Socket} ->
             io:format("connected to ~p:~p~n", [env(irc_server),env(irc_port)]),
+            send(Socket, initial_sequence()),
             spawn_loop_proc(Socket);
         {error, Reason} ->
-            Reason
+            io:format("failed to connect because of ~p~n", [Reason]),
+            initial_listen()
     end.
 
 send(_Socket, []) -> ok;
@@ -88,12 +90,13 @@ send(Socket, InstructionList) ->
 loop(Socket) ->
     case gen_tcp:recv(Socket, 0) of
         {ok, Packet} ->
-            process_message(Packet, Socket);
+            process_message(Packet, Socket),
+            loop(Socket);
             %%gen_server:cast(Server, {received, self(), Socket});
         {error, Reason} ->
-            io:format(Reason)
-    end,
-    loop(Socket).
+            io:format("connection problem, reason: ~p~n", [Reason]),
+            initial_listen()
+    end.
 
 spawn_loop_proc(Socket) ->
     proc_lib:spawn(?MODULE, loop, [Socket]),
@@ -114,8 +117,6 @@ process_message(Packet, Socket) ->
 
 parse_thing(Type, Packet, Socket) ->
     case Type of
-        pubnotice ->
-            check_notice(Socket, Packet);
         endofmotd ->
             send(Socket, [irc_commands:join(env(irc_channel))]);
         topic ->
@@ -125,14 +126,6 @@ parse_thing(Type, Packet, Socket) ->
             send(Socket, [irc_commands:pong(Packet)]);
         _ ->
             ok
-    end.
-
-
-check_notice(Socket, Packet) ->
-    [_Server, _Type, From, _Message | _Tail] = string:tokens(Packet, " "),
-    case From of
-        "*" -> send(Socket, initial_sequence());
-        _ -> ok
     end.
 
 topic_change(Packet, Socket) ->
@@ -148,12 +141,6 @@ topic_change(Packet, Socket) ->
             nil
     end.
 
-
-
-%% spam this until we end up in a channel, this is really
-%% ghetto but its not immediately clear to me that theres
-%% a super nicer way to handle this
-    
 initial_sequence() ->
     [irc_commands:password(env(irc_ident_pass)),
     irc_commands:nick(env(irc_login)),
