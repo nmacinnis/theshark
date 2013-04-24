@@ -77,25 +77,31 @@ send(_Socket, []) -> ok;
 send(Socket, InstructionList) ->
     [Head|Tail] = InstructionList,
 
-    ok = gen_tcp:send(Socket, Head ++ "\n"),
-    io:format("sent: ~p~n", [Head]),
-
-    case length(Tail) of
-        0 -> ok;
-        _ -> timer:sleep(1000)
-    end,
-
-    send(Socket, Tail).
+    case gen_tcp:send(Socket, Head ++ "\n") of
+        ok ->
+            io:format("sent: ~p~n", [Head]),
+            case length(Tail) of
+                0 -> ok;
+                _ -> timer:sleep(1000)
+            end,
+            send(Socket, Tail);
+        {error, Reason} ->
+            io:format("failed to send, reason: ~p~n", [Reason])
+    end.
+            
 
 loop(Socket) ->
-    case gen_tcp:recv(Socket, 0) of
+    case gen_tcp:recv(Socket, 0, 180000) of
         {ok, Packet} ->
             process_message(Packet, Socket),
             loop(Socket);
             %%gen_server:cast(Server, {received, self(), Socket});
+        {error, timeout} ->
+            io:format("connection timed out, attempting reconnect"),
+            initial_listen();
         {error, Reason} ->
             io:format("connection problem, reason: ~p~n", [Reason]),
-            initial_listen()
+            exit(Reason)
     end.
 
 spawn_loop_proc(Socket) ->
