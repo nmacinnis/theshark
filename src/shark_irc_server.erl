@@ -5,7 +5,6 @@
 -export([start_link/0, url/2, go/0]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
     code_change/3]).
--export([loop/1]).
 
 -import(shark_util, [env/1]).
 -import(irc_basics, [process_code/1]).
@@ -18,7 +17,7 @@ start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 url(Url, Socket) ->
-    gen_server:call(?MODULE, {Url, Socket}).
+    gen_server:cast(?MODULE, {url, Url, Socket}).
 
 go() ->
     gen_server:cast(?MODULE, go).
@@ -35,8 +34,12 @@ handle_call({Url, Socket}, _From, State) ->
     send(Socket, [irc_commands:say(env(irc_channel), Url)]),
     {reply, _From, State}.
 
-handle_cast({accepted, _Pid, Socket}, State) ->
-    spawn_loop_proc(Socket),
+handle_cast({url, Url, Socket}, State) ->
+    io:format("sayin a thing ~s~n", [Url]),
+    send(Socket, [irc_commands:say(env(irc_channel), Url)]),
+    {noreply, State};
+handle_cast({listen, Socket}, State) ->
+    listen(Socket),
     {noreply, State};
 handle_cast(go, State) ->
     initial_listen(),
@@ -67,10 +70,10 @@ initial_listen() ->
         {ok, Socket} ->
             io:format("connected to ~p:~p~n", [env(irc_server),env(irc_port)]),
             send(Socket, initial_sequence()),
-            spawn_loop_proc(Socket);
+            gen_server:cast(?MODULE, {listen, Socket});
         {error, Reason} ->
             io:format("failed to connect because of ~p~n", [Reason]),
-            initial_listen()
+            exit(self(), Reason)
     end.
 
 send(_Socket, []) -> ok;
@@ -90,23 +93,18 @@ send(Socket, InstructionList) ->
     end.
             
 
-loop(Socket) ->
+listen(Socket) ->
     case gen_tcp:recv(Socket, 0, 180000) of
         {ok, Packet} ->
             process_message(Packet, Socket),
-            loop(Socket);
-            %%gen_server:cast(Server, {received, self(), Socket});
+            gen_server:cast(?MODULE, {listen, Socket});
         {error, timeout} ->
             io:format("connection timed out, attempting reconnect"),
-            initial_listen();
+            gen_server:cast(?MODULE, go);
         {error, Reason} ->
             io:format("connection problem, reason: ~p~n", [Reason]),
-            exit(Reason)
+            exit(self(), Reason)
     end.
-
-spawn_loop_proc(Socket) ->
-    proc_lib:spawn(?MODULE, loop, [Socket]),
-    Socket.
 
 process_message(Packet, Socket) ->
     io:format("~s",[Packet]),
