@@ -104,7 +104,8 @@ process_message(Packet, Socket) ->
     case string:to_lower(Head) of 
         "ping" ->
             [_, From | _] = Tokenized,
-            parse_thing(ping, From, Socket);
+            send(Socket, [irc_commands:pong(From)]),
+            shark_twitter_server:get_mentions(Socket);
         _ ->
             [_, Type | _] = Tokenized,
             parse_thing(process_code(Type), Packet, Socket)
@@ -117,8 +118,6 @@ parse_thing(Type, Packet, Socket) ->
         topic ->
             io:format("topic!!"),
             topic_change(Packet, Socket);
-        ping ->
-            send(Socket, [irc_commands:pong(Packet)]);
         _ ->
             ok
     end.
