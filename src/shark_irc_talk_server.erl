@@ -2,7 +2,7 @@
 
 -behaviour(gen_server).
 
--export([start_link/0, url/2]).
+-export([start_link/0, say/2]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
     code_change/3]).
 
@@ -16,8 +16,8 @@
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
-url(Url, Socket) ->
-    gen_server:cast(?MODULE, {url, Url, Socket}).
+say(Text, Socket) ->
+    gen_server:cast(?MODULE, {say, Text, Socket}).
 
 %% ============================================================================
 %% gen_server Behaviour
@@ -29,9 +29,9 @@ init(State) ->
 handle_call(_, _From, State) ->
     {noreply, _From, State}.
 
-handle_cast({url, Url, Socket}, State) ->
-    io:format("sayin a thing ~s~n", [Url]),
-    send(Socket, [irc_commands:say(env(irc_channel), Url)]),
+handle_cast({say, Text, Socket}, State) ->
+    io:format("sayin a thing ~s~n", [Text]),
+    send(Socket, [irc_commands:say(env(irc_channel), Text)]),
     {noreply, State}.
 
 handle_info(_Info, State) ->
