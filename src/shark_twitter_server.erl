@@ -31,7 +31,7 @@ handle_call(idk, _From, State) ->
 handle_cast({Status, Socket}, State) ->
     {ok, Response} = post_status(Status),
     Url = get_url_from_response(Response),
-    shark_irc_server:url(Url, Socket),
+    shark_irc_talk_server:url(Url, Socket),
     {noreply, State}.
 
 handle_info(_Info, State) ->

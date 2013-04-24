@@ -14,9 +14,12 @@ init([]) ->
             {shark_twitter_server, 
               {shark_twitter_server, start_link, []},
               permanent, brutal_kill, worker, [shark_twitter_server]},
-            {shark_irc_server, 
-              {shark_irc_server, start_link, []},
-              permanent, brutal_kill, worker, [shark_irc_server]}
+            {shark_irc_listen_server, 
+              {shark_irc_listen_server, start_link, []},
+              permanent, brutal_kill, worker, [shark_irc_listen_server]},
+            {shark_irc_talk_server, 
+              {shark_irc_talk_server, start_link, []},
+              permanent, brutal_kill, worker, [shark_irc_talk_server]}
         ]
     }
 }.
