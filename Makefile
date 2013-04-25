@@ -2,8 +2,8 @@ ebin/:
 	(mkdir -p ebin)
 
 all: ebin/
-	erlc -o ebin src/* 
-	erlc -o ebin include/* 
+	erlc -o ebin src/*.erl
+	erlc -W0 -o ebin include/*.erl 
 
 clean:
 	rm -rf ebin/*.beam erl_crash.dump
