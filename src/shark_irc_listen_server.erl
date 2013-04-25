@@ -9,14 +9,16 @@
 -import(shark_util, [env/1]).
 -import(irc_basics, [process_code/1]).
 
--record(state, {socket, mention_id}).
+-include("record.hrl").
+
 
 %% ============================================================================
 %% Module API
 %% ============================================================================
 
 start_link() ->
-    gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
+    State = #state{},
+    gen_server:start_link({local, ?MODULE}, ?MODULE, State, []).
 
 go() ->
     gen_server:cast(?MODULE, go).
@@ -31,11 +33,11 @@ init(State) ->
 handle_call(_, _From, State) ->
     {noreply, _From, State}.
 
-handle_cast({listen, Socket}, State) ->
-    listen(Socket),
+handle_cast(listen, State) ->
+    listen(State),
     {noreply, State};
 handle_cast(go, State) ->
-    initial_listen(),
+    initial_listen(State),
     {noreply, State}.
 
 handle_info(_Info, State) ->
@@ -56,14 +58,16 @@ code_change(_OldVsn, State, _Extra) ->
 
 
 
-initial_listen() ->
+initial_listen(State) ->
     Options = socket_options(),
 
     case gen_tcp:connect(env(irc_server), list_to_integer(env(irc_port)), Options) of
         {ok, Socket} ->
+            UpdatedState = State#state{socket = Socket},
+            shark_twitter_server:update_socket(self(), Socket),
             io:format("connected to ~p:~p~n", [env(irc_server),env(irc_port)]),
             send(Socket, initial_sequence()),
-            gen_server:cast(?MODULE, {listen, Socket});
+            gen_server:cast(?MODULE, {listen, UpdatedState});
         {error, Reason} ->
             io:format("failed to connect because of ~p~n", [Reason]),
             exit(self(), Reason)
@@ -86,11 +90,12 @@ send(Socket, InstructionList) ->
     end.
             
 
-listen(Socket) ->
+listen(State) ->
+    Socket = State#state.socket,
     case gen_tcp:recv(Socket, 0, 180000) of
         {ok, Packet} ->
-            process_message(Packet, Socket),
-            gen_server:cast(?MODULE, {listen, Socket});
+            process_message(Packet, State),
+            gen_server:cast(?MODULE, {listen, State});
         {error, timeout} ->
             io:format("connection timed out, attempting reconnect"),
             gen_server:cast(?MODULE, go);
@@ -99,7 +104,8 @@ listen(Socket) ->
             exit(self(), Reason)
     end.
 
-process_message(Packet, Socket) ->
+process_message(Packet, State) ->
+    Socket = State#state.socket,
     io:format("~s",[Packet]),
     Tokenized = string:tokens(Packet, " "),
     [Head | _] = Tokenized,
@@ -107,7 +113,7 @@ process_message(Packet, Socket) ->
         "ping" ->
             [_, From | _] = Tokenized,
             send(Socket, [irc_commands:pong(From)]),
-            shark_twitter_server:get_mentions(Socket);
+            shark_twitter_server:get_mentions();
         _ ->
             [_, Type | _] = Tokenized,
             parse_thing(process_code(Type), Packet, Socket)
@@ -119,12 +125,12 @@ parse_thing(Type, Packet, Socket) ->
             send(Socket, [irc_commands:join(env(irc_channel))]);
         topic ->
             io:format("topic!!"),
-            topic_change(Packet, Socket);
+            topic_change(Packet);
         _ ->
             ok
     end.
 
-topic_change(Packet, Socket) ->
+topic_change(Packet) ->
     Tokenized = string:tokens(Packet, " "),
     if 
         length(Tokenized) >= 4 ->
@@ -132,7 +138,7 @@ topic_change(Packet, Socket) ->
             Rest = lists:concat([Token ++ " " || Token <- RemainingTokens]),
             Topic = lists:sublist(Rest, 2, lists:flatlength(Rest)-3),
             io:format("~s~n", [Topic]),
-            shark_twitter_server:post(Topic, Socket);
+            shark_twitter_server:post(Topic);
         true ->
             nil
     end.

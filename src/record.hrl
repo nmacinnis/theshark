@@ -1,0 +1,1 @@
+-record(state, {socket = nosocket, mention_id = noid}).

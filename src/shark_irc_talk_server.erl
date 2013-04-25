@@ -9,14 +9,16 @@
 -import(shark_util, [env/1]).
 -import(irc_basics, [process_code/1]).
 
--record(state, {socket, mention_id}).
+-include("record.hrl").
+
 
 %% ============================================================================
 %% Module API
 %% ============================================================================
 
 start_link() ->
-    gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
+    State = #state{},
+    gen_server:start_link({local, ?MODULE}, ?MODULE, State, []).
 
 say(Text, Socket) ->
     gen_server:cast(?MODULE, {say, Text, Socket}).
