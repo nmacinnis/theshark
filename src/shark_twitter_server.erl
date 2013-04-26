@@ -2,7 +2,7 @@
 
 -behaviour(gen_server).
 
--export([start_link/0, post/1, get_mentions/0, update_socket/2, update_mention_id/2]).
+-export([start_link/0, post/1, get_mentions/0, update_socket/1, update_mention_id/1]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
         code_change/3]).
 
@@ -22,13 +22,14 @@ post(Status) ->
     gen_server:cast(?MODULE, {status, Status}).
 
 get_mentions() ->
-    gen_server:cast(?MODULE, {mentions}).
+    io:format("k dude told me get mentions what we got"),
+    gen_server:cast(?MODULE, mentions).
 
-update_socket(From, Socket) ->
-    gen_server:call(From, {update_socket, Socket}).
+update_socket(Socket) ->
+    gen_server:call(?MODULE, {update_socket, Socket}).
 
-update_mention_id(From, MentionId) ->
-    gen_server:call(From, {update_mention_id, MentionId}).
+update_mention_id(MentionId) ->
+    gen_server:call(?MODULE, {update_mention_id, MentionId}).
 %% ============================================================================
 %% gen_server Behaviour
 %% ============================================================================
@@ -37,27 +38,28 @@ init(State) ->
     {ok, State}.
 
 handle_call({update_socket, Socket}, _From, State) ->
+    io:format("updated socket is now ~w", [Socket]),
     UpdatedState = State#state{socket = Socket},
-    {ok, _From, UpdatedState};
+    {reply, _From, UpdatedState};
 handle_call({update_mention_id, MentionId}, _From, State) ->
+    io:format("latest mention id is now ~w", [MentionId]),
     UpdatedState = State#state{mention_id = MentionId},
-    {ok, _From, UpdatedState};
-handle_call(_, _From, State) ->
-    {ok, _From, State}.
+    {reply, _From, UpdatedState}.
 
 handle_cast(mentions, State) ->
+    io:format("aight gettin some mentions here we goooo"),
     {ok, Response} = get_latest_mention(State),
     case get_mention_from_response(Response) of
-        noupdate -> noupdate;
-        Text -> shark_irc_talk_server:say(Text, State#state.socket)
-    end,
-    {noreply, State};
+        noupdate -> {noreply, State};
+        {Id, Text} ->
+            io:format("ok sayin some stuff to talkbot"),
+            shark_irc_talk_server:say(Text, State#state.socket),
+            {noreply, State#state{mention_id = Id}}
+    end;
 handle_cast({status, Status}, State) ->
     {ok, Response} = post_status(Status),
     Url = get_url_from_response(Response),
     shark_irc_talk_server:say(Url, State#state.socket),
-    {noreply, State};
-handle_cast(_, State) ->
     {noreply, State}.
 
 handle_info(_Info, State) ->
@@ -102,6 +104,7 @@ get_latest_mention(State) ->
     AccessToken         = env(access_token),
     AccessTokenSecret   = env(access_token_secret),
     Consumer = {ConsumerKey, ConsumerSecret, hmac_sha1},
+    io:format("tryna find a mention"),
     OauthResponse = oauth:get(TwitterMentionsUri, get_mentions_args(State#state.mention_id), Consumer, AccessToken, AccessTokenSecret),
     OauthResponse.
 
@@ -121,12 +124,12 @@ get_mention_from_response(Response) ->
     end.
 
 parse_mention_terms(Terms) ->
+    io:format("got some terms woop woop"),
     {_, IdBinary} = lists:keyfind(<<"id_str">>, 1, Terms),
     Id = binary_to_list(IdBinary),
-    update_mention_id(self(), Id),
     {_, TextBinary} = lists:keyfind(<<"text">>, 1, Terms),
     Text = binary_to_list(TextBinary),
     {_, {UserBinary}} = lists:keyfind(<<"user">>, 1, Terms),
     {_, ScreenNameBinary} = lists:keyfind(<<"screen_name">>, 1, UserBinary),
     ScreenName = binary_to_list(ScreenNameBinary),
-    Text ++ " ~ " ++ ScreenName.
+    {Id, Text ++ " ~ " ++ ScreenName}.

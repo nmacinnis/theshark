@@ -32,9 +32,9 @@ init(State) ->
 handle_call(_, _From, State) ->
     {noreply, _From, State}.
 
-handle_cast(listen, State) ->
-    listen(State),
-    {noreply, State};
+handle_cast({listen, UpdatedState}, _State) ->
+    listen(UpdatedState),
+    {noreply, UpdatedState};
 handle_cast(go, State) ->
     initial_listen(State),
     {noreply, State}.
@@ -63,9 +63,11 @@ initial_listen(State) ->
     case gen_tcp:connect(env(irc_server), list_to_integer(env(irc_port)), Options) of
         {ok, Socket} ->
             UpdatedState = State#state{socket = Socket},
-            shark_twitter_server:update_socket(self(), Socket),
+            shark_twitter_server:update_socket(Socket),
             io:format("connected to ~p:~p~n", [env(irc_server),env(irc_port)]),
             send(Socket, initial_sequence()),
+            io:format("tellin twiterbot to get some mentions eh"),
+            shark_twitter_server:get_mentions(),
             gen_server:cast(?MODULE, {listen, UpdatedState});
         {error, Reason} ->
             io:format("failed to connect because of ~p~n", [Reason]),
@@ -112,6 +114,7 @@ process_message(Packet, State) ->
         "ping" ->
             [_, From | _] = Tokenized,
             send(Socket, [irc_commands:pong(From)]),
+            io:format("tellin twiterbot to get some mentions eh"),
             shark_twitter_server:get_mentions();
         _ ->
             [_, Type | _] = Tokenized,
