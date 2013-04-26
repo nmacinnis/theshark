@@ -22,7 +22,6 @@ post(Status) ->
     gen_server:cast(?MODULE, {status, Status}).
 
 get_mentions() ->
-    io:format("k dude told me get mentions what we got"),
     gen_server:cast(?MODULE, mentions).
 
 update_socket(Socket) ->
@@ -48,13 +47,15 @@ handle_call({update_mention_id, MentionId}, _From, State) ->
 
 handle_cast(mentions, State) ->
     io:format("aight gettin some mentions here we goooo"),
-    {ok, Response} = get_latest_mention(State),
-    case get_mention_from_response(Response) of
-        noupdate -> {noreply, State};
-        {Id, Text} ->
-            io:format("ok sayin some stuff to talkbot"),
-            shark_irc_talk_server:say(Text, State#state.socket),
-            {noreply, State#state{mention_id = Id}}
+    case get_latest_mention(State) of
+        {ok, Response} ->
+            case get_mention_from_response(Response) of
+                noupdate -> {noreply, State};
+                {Id, Text} ->
+                    shark_irc_talk_server:say(Text, State#state.socket),
+                    {noreply, State#state{mention_id = Id}}
+            end;
+        _ -> {noreply, State}
     end;
 handle_cast({status, Status}, State) ->
     {ok, Response} = post_status(Status),
@@ -85,7 +86,7 @@ get_mentions_args(noid) ->
         {include_entities, "false"}
     ];
 get_mentions_args(SinceId) ->
-    get_mentions_args(noid) ++ {since_id, SinceId}.
+    get_mentions_args(noid) ++ [{since_id, SinceId}].
 
 post_status(Status) ->
     TwitterUpdateUri    = env(twitter_update_uri),
@@ -104,7 +105,7 @@ get_latest_mention(State) ->
     AccessToken         = env(access_token),
     AccessTokenSecret   = env(access_token_secret),
     Consumer = {ConsumerKey, ConsumerSecret, hmac_sha1},
-    io:format("tryna find a mention"),
+    io:format("requesting the latest mention from twitter~n"),
     OauthResponse = oauth:get(TwitterMentionsUri, get_mentions_args(State#state.mention_id), Consumer, AccessToken, AccessTokenSecret),
     OauthResponse.
 
@@ -117,14 +118,17 @@ get_url_from_response(Response) ->
 
 get_mention_from_response(Response) ->
     {_, _, Json} = Response,
-    [{Terms}] = json_eep:json_to_term(Json),
-    case lists:keyfind(<<"id_str">>, 1, Terms) of
-        false -> noupdate;
-        _ -> parse_mention_terms(Terms)
+    case json_eep:json_to_term(Json) of
+        [{Terms}] ->
+            case lists:keyfind(<<"id_str">>, 1, Terms) of
+                false -> noupdate;
+                _ -> parse_mention_terms(Terms)
+            end;
+        _ -> noupdate
     end.
 
 parse_mention_terms(Terms) ->
-    io:format("got some terms woop woop"),
+    io:format("got a mention from twitter~n"),
     {_, IdBinary} = lists:keyfind(<<"id_str">>, 1, Terms),
     Id = binary_to_list(IdBinary),
     {_, TextBinary} = lists:keyfind(<<"text">>, 1, Terms),

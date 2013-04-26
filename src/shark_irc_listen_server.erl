@@ -27,6 +27,7 @@ go() ->
 %% ============================================================================
 
 init(State) ->
+    go(),
     {ok, State}.
 
 handle_call(_, _From, State) ->
@@ -66,7 +67,6 @@ initial_listen(State) ->
             shark_twitter_server:update_socket(Socket),
             io:format("connected to ~p:~p~n", [env(irc_server),env(irc_port)]),
             send(Socket, initial_sequence()),
-            io:format("tellin twiterbot to get some mentions eh"),
             shark_twitter_server:get_mentions(),
             gen_server:cast(?MODULE, {listen, UpdatedState});
         {error, Reason} ->
@@ -98,7 +98,7 @@ listen(State) ->
             process_message(Packet, State),
             gen_server:cast(?MODULE, {listen, State});
         {error, timeout} ->
-            io:format("connection timed out, attempting reconnect"),
+            io:format("connection timed out, attempting reconnect~n"),
             gen_server:cast(?MODULE, go);
         {error, Reason} ->
             io:format("connection problem, reason: ~p~n", [Reason]),
@@ -114,7 +114,6 @@ process_message(Packet, State) ->
         "ping" ->
             [_, From | _] = Tokenized,
             send(Socket, [irc_commands:pong(From)]),
-            io:format("tellin twiterbot to get some mentions eh"),
             shark_twitter_server:get_mentions();
         _ ->
             [_, Type | _] = Tokenized,
@@ -126,7 +125,7 @@ parse_thing(Type, Packet, Socket) ->
         endofmotd ->
             send(Socket, [irc_commands:join(env(irc_channel))]);
         topic ->
-            io:format("topic!!"),
+            io:format("topic!!~n"),
             topic_change(Packet);
         _ ->
             ok
