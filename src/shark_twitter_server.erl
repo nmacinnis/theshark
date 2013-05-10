@@ -37,16 +37,15 @@ init(State) ->
     {ok, State}.
 
 handle_call({update_socket, Socket}, _From, State) ->
-    io:format("updated socket is now ~w", [Socket]),
+    io:format("updated socket is now ~w~n", [Socket]),
     UpdatedState = State#state{socket = Socket},
     {reply, _From, UpdatedState};
 handle_call({update_mention_id, MentionId}, _From, State) ->
-    io:format("latest mention id is now ~w", [MentionId]),
+    io:format("latest mention id is now ~w~n", [MentionId]),
     UpdatedState = State#state{mention_id = MentionId},
     {reply, _From, UpdatedState}.
 
 handle_cast(mentions, State) ->
-    io:format("aight gettin some mentions here we goooo"),
     case get_latest_mention(State) of
         {ok, Response} ->
             case get_mention_from_response(Response) of
