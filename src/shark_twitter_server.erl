@@ -51,7 +51,12 @@ handle_cast(mentions, State) ->
             case get_mention_from_response(Response) of
                 noupdate -> {noreply, State};
                 {Id, Text} ->
-                    shark_irc_talk_server:say(Text, State#state.socket),
+                    case State#state.mention_id of
+                        noid ->
+                            shh;
+                        _ ->
+                            shark_irc_talk_server:say(Text, State#state.socket)
+                    end,
                     {noreply, State#state{mention_id = Id}}
             end;
         _ -> {noreply, State}
