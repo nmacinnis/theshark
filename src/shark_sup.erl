@@ -9,7 +9,7 @@ start_link() ->
     supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 init([]) ->
-    {ok, {{one_for_one, 1, 60},
+    {ok, {{one_for_one, 2, 60},
         [
             {shark_twitter_server, 
               {shark_twitter_server, start_link, []},

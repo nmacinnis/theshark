@@ -71,6 +71,8 @@ initial_listen(State) ->
             gen_server:cast(?MODULE, {listen, UpdatedState});
         {error, Reason} ->
             io:format("failed to connect because of ~p~n", [Reason]),
+            io:format("sleeping 60 seconds and then exiting~n"),
+            timer:sleep(60000),
             exit(self(), Reason)
     end.
 
