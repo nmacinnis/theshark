@@ -65,6 +65,7 @@ initial_listen(State) ->
         {ok, Socket} ->
             UpdatedState = State#state{socket = Socket},
             shark_twitter_server:update_socket(Socket),
+            shark_memer_server:update_socket(Socket),
             io:format("connected to ~p:~p~n", [env(irc_server),env(irc_port)]),
             send(Socket, initial_sequence()),
             shark_twitter_server:get_mentions(),
@@ -141,7 +142,13 @@ topic_change(Packet) ->
             Rest = lists:concat([Token ++ " " || Token <- RemainingTokens]),
             Topic = lists:sublist(Rest, 2, lists:flatlength(Rest)-3),
             io:format("~s~n", [Topic]),
-            shark_twitter_server:post(Topic);
+            case re:run(Topic, ".*\|.*") of
+                {match, _} ->
+                    Url = shark_memer_server:post(Topic),
+                    shark_twitter_server:post(Url);
+                nomatch ->
+                    shark_twitter_server:post(Topic)
+            end;
         true ->
             nil
     end.
