@@ -32,7 +32,7 @@ init(State) ->
     {ok, State}.
 
 handle_call({update_socket, Socket}, _From, State) ->
-    io:format("updated socket is now ~w", [Socket]),
+    io:format("updated socket is now ~w~n", [Socket]),
     UpdatedState = State#state{socket = Socket},
     {reply, _From, UpdatedState};
 handle_call({status, Status}, _From, State) ->
@@ -42,7 +42,6 @@ handle_call({status, Status}, _From, State) ->
         dang ->
             {noreply, _From, State};
         Url ->
-            %shark_irc_talk_server:say(Url, State#state.socket)
             {reply, Url, State}
     end.
 
@@ -64,16 +63,13 @@ code_change(_OldVsn, State, _Extra) ->
 %% ============================================================================
 
 post_status(Status) ->
-    io:format("memin' status: ~w~n", [Status]),
     SplitList = re:split(Status, "\\|", [{return, list}]),
     case SplitList of
         [Status1, Status2 | _ ] ->
-            io:format("memin' splitlist: ~w~n", [SplitList]),
             T1 = "&t1=" ++ http_uri:encode(Status1),
             T2 = "&t2=" ++ http_uri:encode(Status2),
             MemeCaptainUrl    = env(meme_captain_url),
             Url = MemeCaptainUrl ++ T1 ++ T2,
-            io:format("memin' url: ~w~n", [Url]),
             Response = httpc:request(Url),
             case Response of
                 {ok, _} ->

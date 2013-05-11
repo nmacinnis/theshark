@@ -2,7 +2,7 @@
 
 -behaviour(gen_server).
 
--export([start_link/0, say/2]).
+-export([start_link/0, update_socket/1, say/1]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
     code_change/3]).
 
@@ -20,8 +20,11 @@ start_link() ->
     State = #state{},
     gen_server:start_link({local, ?MODULE}, ?MODULE, State, []).
 
-say(Text, Socket) ->
-    gen_server:cast(?MODULE, {say, Text, Socket}).
+update_socket(Socket) ->
+    gen_server:call(?MODULE, {update_socket, Socket}).
+
+say(Text) ->
+    gen_server:cast(?MODULE, {say, Text}).
 
 %% ============================================================================
 %% gen_server Behaviour
@@ -30,12 +33,16 @@ say(Text, Socket) ->
 init(State) ->
     {ok, State}.
 
+handle_call({update_socket, Socket}, _From, State) ->
+    io:format("updated socket is now ~w~n", [Socket]),
+    UpdatedState = State#state{socket = Socket},
+    {reply, _From, UpdatedState};
 handle_call(_, _From, State) ->
     {noreply, _From, State}.
 
-handle_cast({say, Text, Socket}, State) ->
+handle_cast({say, Text}, State) ->
     io:format("sayin a thing ~s~n", [Text]),
-    send(Socket, [irc_commands:say(env(irc_channel), Text)]),
+    send(State#state.socket, [irc_commands:say(env(irc_channel), Text)]),
     {noreply, State}.
 
 handle_info(_Info, State) ->

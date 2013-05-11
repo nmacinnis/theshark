@@ -55,7 +55,7 @@ handle_cast(mentions, State) ->
                         noid ->
                             shh;
                         _ ->
-                            shark_irc_talk_server:say(Text, State#state.socket)
+                            shark_irc_talk_server:say(Text)
                     end,
                     {noreply, State#state{mention_id = Id}}
             end;
@@ -64,7 +64,7 @@ handle_cast(mentions, State) ->
 handle_cast({status, Status}, State) ->
     {ok, Response} = post_status(Status),
     Url = get_url_from_response(Response),
-    shark_irc_talk_server:say(Url, State#state.socket),
+    shark_irc_talk_server:say(Url),
     {noreply, State}.
 
 handle_info(_Info, State) ->
