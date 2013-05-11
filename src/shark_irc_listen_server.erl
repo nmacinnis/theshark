@@ -66,6 +66,7 @@ initial_listen(State) ->
             UpdatedState = State#state{socket = Socket},
             shark_twitter_server:update_socket(Socket),
             shark_memer_server:update_socket(Socket),
+            shark_irc_talk_server:update_socket(Socket),
             io:format("connected to ~p:~p~n", [env(irc_server),env(irc_port)]),
             send(Socket, initial_sequence()),
             shark_twitter_server:get_mentions(),
