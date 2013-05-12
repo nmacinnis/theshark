@@ -93,7 +93,6 @@ send(Socket, InstructionList) ->
         {error, Reason} ->
             io:format("failed to send, reason: ~p~n", [Reason])
     end.
-            
 
 listen(State) ->
     Socket = State#state.socket,
