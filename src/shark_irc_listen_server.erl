@@ -142,7 +142,7 @@ topic_change(Packet) ->
             Rest = lists:concat([Token ++ " " || Token <- RemainingTokens]),
             Topic = lists:sublist(Rest, 2, lists:flatlength(Rest)-3),
             io:format("~s~n", [Topic]),
-            case re:run(Topic, ".*\|.*") of
+            case re:run(Topic, ".*\\|.*") of
                 {match, _} ->
                     Url = shark_memer_server:post(Topic),
                     shark_twitter_server:post(Url);
