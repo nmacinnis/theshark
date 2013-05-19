@@ -94,6 +94,7 @@ send(Socket, InstructionList) ->
             io:format("failed to send, reason: ~p~n", [Reason])
     end.
 
+-spec(listen(#state{socket::port()}) -> ok).
 listen(State) ->
     Socket = State#state.socket,
     case gen_tcp:recv(Socket, 0, 180000) of
@@ -106,7 +107,8 @@ listen(State) ->
         {error, Reason} ->
             io:format("connection problem, reason: ~p~n", [Reason]),
             exit(self(), Reason)
-    end.
+    end,
+    ok.
 
 process_message(Packet, State) ->
     Socket = State#state.socket,
