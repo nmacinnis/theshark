@@ -63,8 +63,12 @@ handle_cast(mentions, State) ->
     end;
 handle_cast({status, Status}, State) ->
     {ok, Response} = post_status(Status),
-    Url = get_url_from_response(Response),
-    shark_irc_talk_server:say(Url),
+    case get_url_from_response(Response) of
+        {ok, Url} ->
+            shark_irc_talk_server:say(Url);
+        {error, _} ->
+            pass
+    end,
     {noreply, State}.
 
 handle_info(_Info, State) ->
@@ -116,10 +120,17 @@ get_latest_mention(State) ->
 
 get_url_from_response(Response) ->
     {_, _, Json} = Response,
-    {Terms} = json_eep:json_to_term(Json),
-    {_, IdBinary} = lists:keyfind(<<"id_str">>, 1, Terms),
-    Id = binary_to_list(IdBinary),
-    "http://twitter.com/#!/THE___SHARK/status/" ++ Id.
+    try json_eep:json_to_term(Json) of
+        {Terms} ->
+            {_, IdBinary} = lists:keyfind(<<"id_str">>, 1, Terms),
+            Id = binary_to_list(IdBinary),
+            {ok, "http://twitter.com/#!/THE___SHARK/status/" ++ Id}
+    catch
+        error:Error ->
+            io:format("problematic json :/ ->~n~p~n", [Json]),
+            io:format("error ->~n~p~n", [Error]),
+            {error, Error}
+    end.
 
 get_mention_from_response(Response) ->
     {_, _, Json} = Response,
