@@ -138,7 +138,7 @@ parse_thing(Type, Packet, Socket) ->
 
 topic_change(Packet) ->
     Tokenized = string:tokens(Packet, " "),
-    if 
+    if
         length(Tokenized) >= 4 ->
             [_, "TOPIC", _ | RemainingTokens] = Tokenized,
             Rest = lists:concat([Token ++ " " || Token <- RemainingTokens]),
@@ -146,12 +146,15 @@ topic_change(Packet) ->
             io:format("~s~n", [Topic]),
             case re:run(Topic, ".*\\|.*") of
                 {match, _} ->
+                    io:format("tweeting a meme~n", []),
                     Url = shark_memer_server:post(Topic),
                     shark_twitter_server:post(Url);
                 nomatch ->
+                    io:format("tweeting a topic: ~p~n", [Topic]),
                     shark_twitter_server:post(Topic)
             end;
         true ->
+            io:format("didn't know what to do with this topic:~n~p~n", [Packet]),
             nil
     end.
 

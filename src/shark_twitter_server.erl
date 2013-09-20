@@ -84,7 +84,7 @@ code_change(_OldVsn, State, _Extra) ->
 make_status(Text) -> {status, Text}.
 
 
-get_mentions_args(noid) -> 
+get_mentions_args(noid) ->
     [
         {count, "1"},
         {include_entities, "false"}
@@ -93,6 +93,7 @@ get_mentions_args(SinceId) ->
     get_mentions_args(noid) ++ [{since_id, SinceId}].
 
 post_status(Status) ->
+    io:format("oh shit tweetin, damn: ~p~n", [Status]),
     TwitterUpdateUri    = env(twitter_update_uri),
     ConsumerKey         = env(consumer_key),
     ConsumerSecret      = env(consumer_secret),
