@@ -93,8 +93,8 @@ send(Socket, InstructionList) ->
         {error, Reason} ->
             io:format("failed to send, reason: ~p~n", [Reason])
     end.
-            
 
+-spec(listen(#state{socket::port()}) -> ok).
 listen(State) ->
     Socket = State#state.socket,
     case gen_tcp:recv(Socket, 0, 180000) of
@@ -107,7 +107,8 @@ listen(State) ->
         {error, Reason} ->
             io:format("connection problem, reason: ~p~n", [Reason]),
             exit(self(), Reason)
-    end.
+    end,
+    ok.
 
 process_message(Packet, State) ->
     Socket = State#state.socket,
@@ -137,7 +138,7 @@ parse_thing(Type, Packet, Socket) ->
 
 topic_change(Packet) ->
     Tokenized = string:tokens(Packet, " "),
-    if 
+    if
         length(Tokenized) >= 4 ->
             [_, "TOPIC", _ | RemainingTokens] = Tokenized,
             Rest = lists:concat([Token ++ " " || Token <- RemainingTokens]),
@@ -145,12 +146,15 @@ topic_change(Packet) ->
             io:format("~s~n", [Topic]),
             case re:run(Topic, ".*\\|.*") of
                 {match, _} ->
+                    io:format("tweeting a meme~n", []),
                     Url = shark_memer_server:post(Topic),
                     shark_twitter_server:post(Url);
                 nomatch ->
+                    io:format("tweeting a topic: ~p~n", [Topic]),
                     shark_twitter_server:post(Topic)
             end;
         true ->
+            io:format("didn't know what to do with this topic:~n~p~n", [Packet]),
             nil
     end.
 

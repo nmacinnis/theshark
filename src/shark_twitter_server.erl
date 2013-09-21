@@ -63,8 +63,12 @@ handle_cast(mentions, State) ->
     end;
 handle_cast({status, Status}, State) ->
     {ok, Response} = post_status(Status),
-    Url = get_url_from_response(Response),
-    shark_irc_talk_server:say(Url),
+    case get_url_from_response(Response) of
+        {ok, Url} ->
+            shark_irc_talk_server:say(Url);
+        {error, _} ->
+            pass
+    end,
     {noreply, State}.
 
 handle_info(_Info, State) ->
@@ -84,7 +88,7 @@ code_change(_OldVsn, State, _Extra) ->
 make_status(Text) -> {status, Text}.
 
 
-get_mentions_args(noid) -> 
+get_mentions_args(noid) ->
     [
         {count, "1"},
         {include_entities, "false"}
@@ -93,6 +97,7 @@ get_mentions_args(SinceId) ->
     get_mentions_args(noid) ++ [{since_id, SinceId}].
 
 post_status(Status) ->
+    io:format("oh shit tweetin, damn: ~p~n", [Status]),
     TwitterUpdateUri    = env(twitter_update_uri),
     ConsumerKey         = env(consumer_key),
     ConsumerSecret      = env(consumer_secret),
@@ -114,11 +119,37 @@ get_latest_mention(State) ->
     OauthResponse.
 
 get_url_from_response(Response) ->
-    {_, _, Json} = Response,
-    {Terms} = json_eep:json_to_term(Json),
-    {_, IdBinary} = lists:keyfind(<<"id_str">>, 1, Terms),
-    Id = binary_to_list(IdBinary),
-    "http://twitter.com/#!/THE___SHARK/status/" ++ Id.
+    case extract_json_from_response(Response) of
+        {ok, Json} ->
+            extract_url_from_json(Json);
+        {error, Error} ->
+            {error, Error}
+    end.
+
+extract_json_from_response(Response) ->
+    try erlang:element(3, Response) of
+        Json ->
+            {ok, Json}
+    catch
+        error:Error ->
+            io:format("problematic response :/ ->~n~p~n", [Response]),
+            io:format("error ->~n~p~n", [Error]),
+            {error, Error}
+    end.
+
+extract_url_from_json(Json) ->
+    io:format("json! : ->~n~p~n", [Json]),
+    try json_eep:json_to_term(Json) of
+        {Terms} ->
+            {_, IdBinary} = lists:keyfind(<<"id_str">>, 1, Terms),
+            Id = binary_to_list(IdBinary),
+            {ok, "http://twitter.com/#!/THE___SHARK/status/" ++ Id}
+    catch
+        error:Error ->
+            io:format("problematic json :/ ->~n~p~n", [Json]),
+            io:format("error ->~n~p~n", [Error]),
+            {error, Error}
+    end.
 
 get_mention_from_response(Response) ->
     {_, _, Json} = Response,

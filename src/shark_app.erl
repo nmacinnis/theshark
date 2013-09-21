@@ -3,7 +3,6 @@
 -behaviour(application).
 
 -export([start/2, stop/1]).
--export([post_status/1]).
 
 start(_Type, _StartArgs) ->
     case shark_sup:start_link() of
@@ -13,6 +12,3 @@ start(_Type, _StartArgs) ->
 
 stop(_State) ->
     ok.
-
-post_status(Status) ->
-    shark_twitter_server:post_status(Status).
