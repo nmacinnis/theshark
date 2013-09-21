@@ -143,7 +143,7 @@ extract_url_from_json(Json) ->
         {Terms} ->
             {_, IdBinary} = lists:keyfind(<<"id_str">>, 1, Terms),
             Id = binary_to_list(IdBinary),
-            {ok, "http://twitter.com/#!/THE___SHARK/status/" ++ Id}
+            {ok, "http://twitter.com/#!/" ++ env(twitter_user) ++ "/status/" ++ Id}
     catch
         error:Error ->
             io:format("problematic json :/ ->~n~p~n", [Json]),
