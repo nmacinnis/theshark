@@ -119,7 +119,26 @@ get_latest_mention(State) ->
     OauthResponse.
 
 get_url_from_response(Response) ->
-    {_, _, Json} = Response,
+    case extract_json_from_response(Response) of
+        {ok, Json} ->
+            extract_url_from_json(Json);
+        {error, Error} ->
+            {error, Error}
+    end.
+
+extract_json_from_response(Response) ->
+    try erlang:element(3, Response) of
+        Json ->
+            {ok, Json}
+    catch
+        error:Error ->
+            io:format("problematic response :/ ->~n~p~n", [Response]),
+            io:format("error ->~n~p~n", [Error]),
+            {error, Error}
+    end.
+
+extract_url_from_json(Json) ->
+    io:format("json! : ->~n~p~n", [Json]),
     try json_eep:json_to_term(Json) of
         {Terms} ->
             {_, IdBinary} = lists:keyfind(<<"id_str">>, 1, Terms),
