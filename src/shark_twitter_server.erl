@@ -159,6 +159,8 @@ get_mention_from_response(Response) ->
                 false -> noupdate;
                 _ -> parse_mention_terms(Terms)
             end;
+        [] ->
+            noupdate;
         Weirdness ->
             io:format("unexpected mention response format -> ~n~p~n", [Weirdness]),
             noupdate
