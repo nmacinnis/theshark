@@ -3,6 +3,6 @@
   {vsn, "1"},
   {modules, [shark_app, shark_sup, shark_twitter_server]},
   {registered, [theshark]},
-  {applications, [kernel, stdlib, sasl, crypto, inets]},
+  {applications, [kernel, stdlib, sasl, crypto, inets, ssl]},
   {mod, {shark_app,[]}}
  ]}.

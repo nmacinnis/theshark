@@ -50,6 +50,7 @@ handle_cast(mentions, State) ->
         {ok, Response} ->
             case get_mention_from_response(Response) of
                 noupdate -> {noreply, State};
+                {error, _} -> {noreply, State};
                 {Id, Text} ->
                     case State#state.mention_id of
                         noid ->
@@ -152,18 +153,28 @@ extract_url_from_json(Json) ->
     end.
 
 get_mention_from_response(Response) ->
-    {_, _, Json} = Response,
-    case json_eep:json_to_term(Json) of
+    case extract_json_from_response(Response) of
+        {ok, Json} ->
+            extract_mention_from_json(Json);
+        {error, Error} ->
+            {error, Error}
+    end.
+
+extract_mention_from_json(Json) ->
+    io:format("json! : ->~n~p~n", [Json]),
+    try json_eep:json_to_term(Json) of
         [{Terms}] ->
             case lists:keyfind(<<"id_str">>, 1, Terms) of
                 false -> noupdate;
                 _ -> parse_mention_terms(Terms)
             end;
         [] ->
-            noupdate;
-        Weirdness ->
-            io:format("unexpected mention response format -> ~n~p~n", [Weirdness]),
             noupdate
+    catch
+        error:Error ->
+            io:format("problematic json :/ ->~n~p~n", [Json]),
+            io:format("error ->~n~p~n", [Error]),
+            {error, Error}
     end.
 
 parse_mention_terms(Terms) ->
