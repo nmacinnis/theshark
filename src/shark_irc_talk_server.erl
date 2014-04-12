@@ -60,9 +60,7 @@ code_change(_OldVsn, State, _Extra) ->
 %% ============================================================================
 
 send(_Socket, []) -> ok;
-send(Socket, InstructionList) ->
-    [Head|Tail] = InstructionList,
-
+send(Socket, [Head|Tail]) ->
     case gen_tcp:send(Socket, Head ++ "\n") of
         ok ->
             io:format("sent: ~p~n", [Head]),
