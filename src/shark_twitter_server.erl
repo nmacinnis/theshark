@@ -56,7 +56,8 @@ handle_cast(mentions, State) ->
                         noid ->
                             shh;
                         _ ->
-                            shark_irc_talk_server:say(Text)
+                            shark_irc_talk_server:say(Text),
+                            print_irl(Text)
                     end,
                     {noreply, State#state{mention_id = Id}}
             end;
@@ -70,6 +71,7 @@ handle_cast({status, Status}, State) ->
         {error, _} ->
             pass
     end,
+    print_irl(Status),
     {noreply, State}.
 
 handle_info(_Info, State) ->
@@ -187,3 +189,6 @@ parse_mention_terms(Terms) ->
     {_, ScreenNameBinary} = lists:keyfind(<<"screen_name">>, 1, UserBinary),
     ScreenName = binary_to_list(ScreenNameBinary),
     {Id, Text ++ " ~ " ++ ScreenName}.
+
+print_irl(Text) ->
+    os:cmd("python /home/pi/workspace/Adafruit-Raspberry-Pi-Python-Code/Adafruit_CharLCDPlate/display_msg.py " ++ Text).
