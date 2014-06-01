@@ -191,4 +191,6 @@ parse_mention_terms(Terms) ->
     {Id, Text ++ " ~ " ++ ScreenName}.
 
 print_irl(Text) ->
-    os:cmd("python /home/pi/workspace/Adafruit-Raspberry-Pi-Python-Code/Adafruit_CharLCDPlate/display_msg.py " ++ Text).
+    io:format("attempting to print irl~n~p~n", [Text]),
+    stuff = os:cmd("python /home/pi/workspace/Adafruit-Raspberry-Pi-Python-Code/Adafruit_CharLCDPlate/display_msg.py " ++ Text),
+    io:format("the stuff was ~n~p~n", [Text]).
