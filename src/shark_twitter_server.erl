@@ -192,5 +192,6 @@ parse_mention_terms(Terms) ->
 
 print_irl(Text) ->
     io:format("attempting to print irl~n~p~n", [Text]),
-    stuff = os:cmd("python /home/pi/workspace/Adafruit-Raspberry-Pi-Python-Code/Adafruit_CharLCDPlate/display_msg.py " ++ Text),
-    io:format("the stuff was ~n~p~n", [Text]).
+    EscapedText = re:replace(Text, "'", "\\\\'", [{return, list}]),
+    Stuff = os:cmd("python /home/pi/workspace/Adafruit-Raspberry-Pi-Python-Code/Adafruit_CharLCDPlate/display_msg.py \"" ++ EscapedText ++ "\""),
+    io:format("the stuff was ~n~p~n", [Stuff]).
