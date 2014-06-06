@@ -5,6 +5,7 @@
 -export([start_link/0, post/1, get_mentions/0, update_socket/1, update_mention_id/1]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
         code_change/3]).
+-export([print_irl/1]).
 
 -import(shark_util, [env/1]).
 
