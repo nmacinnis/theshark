@@ -192,6 +192,15 @@ parse_mention_terms(Terms) ->
 
 print_irl(Text) ->
     io:format("attempting to print irl~n~p~n", [Text]),
-    EscapedText = re:replace(Text, "'", "\\\\'", [{return, list}]),
-    Stuff = os:cmd("python /home/pi/workspace/Adafruit-Raspberry-Pi-Python-Code/Adafruit_CharLCDPlate/display_msg.py \"" ++ EscapedText ++ "\""),
-    io:format("the stuff was ~n~p~n", [Stuff]).
+    % Stuff = os:cmd("python /home/pi/workspace/Adafruit-Raspberry-Pi-Python-Code/Adafruit_CharLCDPlate/display_msg.py '" ++ EscapedText ++ "'"),
+    % LcdUrl = env(meme_captain_url),
+    LcdUrl = "http://192.168.1.107:8090/new?new_message=",
+    Url = LcdUrl ++ http_uri:encode(Text),
+    Response = httpc:request(Url),
+    case Response of
+        {ok, Stuff} ->
+            io:format("the stuff was ~n~p~n", [Stuff]),
+            Url;
+        {error, _} ->
+            dang
+    end.
