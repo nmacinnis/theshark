@@ -25,7 +25,7 @@ process_code(Code) ->
         "pong" -> pong;
         "topic" -> topic;
         "nick" -> nick;
-        _ -> 
+        _ ->
             case list_to_integer(Code) of
                 001 -> welcome;
                 002 -> yourhost;

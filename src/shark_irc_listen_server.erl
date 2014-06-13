@@ -113,7 +113,7 @@ process_message(Packet, State) ->
     io:format("~s",[Packet]),
     Tokenized = string:tokens(Packet, " "),
     [Head | _] = Tokenized,
-    case string:to_lower(Head) of 
+    case string:to_lower(Head) of
         "ping" ->
             [_, From | _] = Tokenized,
             send(Socket, [irc_commands:pong(From)]),
